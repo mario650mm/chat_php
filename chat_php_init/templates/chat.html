@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/chat.css" />
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <a class="navbar-brand" href="#">Inicio</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarNavDropdown">
+    <ul class="navbar-nav">
+      <!--<li class="nav-item">
+        <a class="nav-link" href="#">Features</a>
+      </li>-->
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          {USUARIO}
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+          <a class="dropdown-item" href="logout.php"><i class="fa fa-sign-out"></i> Salir</a>
+        </div>
+      </li>
+    </ul>
+  </div>
+</nav>
+<center><div id="welcome">BIENVENIDO {USUARIO}</div></center>
+<br>
+<div class="chat_wrapper">
+<div class="message_box" id="message_box"></div>
+<div class="panel">
+	<!--<input type="text" name="name" id="name" placeholder="Your Name" maxlength="15" />-->
+
+	<input type="text" name="message" id="message" placeholder="Message" maxlength="80" 
+	onkeydown = "if(event.keyCode == 13){document.getElementById('send-btn').click();}"  />
+
+</div>
+<input type="hidden" id="usuario_id" name="usuario_id" value="{USUARIO_ID}" />
+
+<button id="send-btn" class=button>Enviar</button>
+
+</div>
+<!--<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>-->
+<script src="js/jquery-3.1.1.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js"></script>
+<!--<script src="js/jquery-3.1.1.js"></script>-->
+<!--<script src="/socket.io/socket.io.js"></script>-->
+<script language="javascript" type="text/javascript"> 
+	//document.getElementById('welcome').innerHTML = 'Bienvenido '+username; 
+$(document).ready(function(){
+	//create a new WebSocket object.
+	var wsUri = "ws://"+document.location.host+":8080/chat_php_init/server";
+	//var wsUri = new WebSocket("ws://localhost/?service=advanced-chat"); 	
+	var websocket = new WebSocket(wsUri); 
+	/*var io = io();
+	var websocket = io.connect(wsUri);*/
+	
+	websocket.onopen = function(ev) { // connection is open 
+		$('#message_box').append("<div class=\"system_msg\">Conectado!</div>"); //notify user
+		console.log('Conectado');
+	}
+
+	$('#send-btn').click(function(){ 	
+		var mymessage = $('#message').val();
+		var myname = $('#usuario_id').val(); 
+		
+		if(myname == ""){ 
+			alert("Introduzca su nombre, por favor!");
+			return;
+		}
+		if(mymessage == ""){
+			alert("Introduzca su mensaje, por favor!");
+			return;
+		}
+		//document.getElementById("name").style.visibility = "hidden";
+		
+	  	$.ajax({
+	        url: "addMensaje.php",
+	        type: "post",
+	        data: {
+	        	mensaje:mymessage,
+	        	usuario:myname
+	        },
+	        success: function (response) {
+	        },
+	        error: function(jqXHR, textStatus, errorThrown) {
+	           console.log(textStatus, errorThrown);
+	        }
+
+    	});
+
+		var objDiv = document.getElementById("message_box");
+		objDiv.scrollTop = objDiv.scrollHeight;
+		//prepare json data
+		var msg = {
+		message: mymessage,
+		name: '{USUARIO}',
+		color : '<?php echo $colours[$user_colour]; ?>'
+		};
+		//convert and send data to server
+		websocket.send(JSON.stringify(msg));
+	});
+	
+	websocket.onmessage = function(ev) {
+		console.log(ev.data);
+		var msg = JSON.parse(ev.data); //PHP sends Json data
+		var type = msg.type; //message type
+		var umsg = msg.message; //message text
+		var uname = msg.name; //user name
+		var ucolor = msg.color; //color
+
+		if(type == 'usermsg') 
+		{
+			$('#message_box').append("<div><span class=\"user_name\" style=\"color:#"+ucolor+"\">"+uname+"</span> : <span class=\"user_message\">"+umsg+"</span></div>");
+		}
+		if(type == 'system')
+		{
+			$('#message_box').append("<div class=\"system_msg\">"+umsg+"</div>");
+		}
+		
+		$('#message').val(''); //reset text
+		
+		var objDiv = document.getElementById("message_box");
+		objDiv.scrollTop = objDiv.scrollHeight;
+	};
+	
+	websocket.onerror	= function(ev){
+		$('#message_box').append("<div class=\"system_error\">Error en conectar el socket - "+ev.data+"</div>");
+		console.log('error en conexion: '+ev.data);
+	}; 
+	websocket.onclose 	= function(ev){
+		$('#message_box').append("<div class=\"system_msg\">Conexión Cerrada</div>");
+	}; 
+});
+
+
+
+
+</script>
+</body>
+</html>
